@@ -1,17 +1,30 @@
 package com.example.budget_watcher;
 
+import android.Manifest;
+import android.content.pm.PackageManager;
+import android.database.Cursor;
+import android.net.Uri;
 import android.os.Bundle;
+import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 
+import java.util.Date;
+
 public class MainActivity extends AppCompatActivity {
+    private TextView test;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
+
+
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
         setContentView(R.layout.activity_main);
@@ -20,5 +33,47 @@ public class MainActivity extends AppCompatActivity {
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });
+        test = findViewById(R.id.test);
+
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_SMS}, 1);
+
+        } else {
+            test.setText("JJ");
+            ReadSMS();
+
+
+        }
+
+
+
+
     }
+    private void ReadSMS(){
+        Uri sms = Uri.parse("content://sms/inbox");
+        Cursor cursor = getContentResolver().query(sms, null, null, null, "date");
+
+
+        if(cursor != null){
+            int messagePos = cursor.getColumnIndex("body");
+            int addressPos = cursor.getColumnIndex("address");
+            int datePos = cursor.getColumnIndex("date");
+
+            while (cursor.moveToNext()){
+                String message = cursor.getString(messagePos);
+                String address = cursor.getString(addressPos);
+                long dateTime = cursor.getLong(datePos);
+                Date date = new Date(dateTime);
+
+                Toast.makeText(this, message, Toast.LENGTH_SHORT).show();
+                test.setText(messagePos);
+            }
+            cursor.close();
+        }else {
+            test.setText("No massage found ");
+
+        }
+
+    }
+
 }
