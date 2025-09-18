@@ -15,13 +15,19 @@ import androidx.core.content.ContextCompat;
 import androidx.core.graphics.Insets;
 import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
 
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.Locale;
+import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
     private TextView test;
+    private static final int REQUEST_CODE_READ_SMS = 1;
+    private MessageAdapter adapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -35,39 +41,46 @@ public class MainActivity extends AppCompatActivity {
             return insets;
         });
 
-        test = findViewById(R.id.test);
+        RecyclerView recyclerView = findViewById(R.id.recyclerView);
+        recyclerView.setLayoutManager(new LinearLayoutManager(this));
+        recyclerView.addItemDecoration(new Spacing(10));
+        adapter = new MessageAdapter();
+        recyclerView.setAdapter(adapter);
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_SMS) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_SMS}, 1);
         } else {
-            ReadSMS();
+            loadMessages();
         }
     }
 
-    private void ReadSMS() {
-        Uri sms = Uri.parse("content://sms");
-        Cursor cursor = getContentResolver().query(sms, null, null, null, "date DESC");
+    private void loadMessages() {
+        List<Message> messages = new ArrayList<>();
+        Uri smsUri = Uri.parse("content://sms");
+        Cursor cursor = getContentResolver().query(smsUri, null, null, null, "date DESC");
 
         if (cursor != null && cursor.moveToFirst()) {
-            int messagePos = cursor.getColumnIndex("body");
-            int addressPos = cursor.getColumnIndex("address");
-            int datePos = cursor.getColumnIndex("date");
+            int bodyIdx = cursor.getColumnIndex("body");
+            int addressIdx = cursor.getColumnIndex("address");
+            int dateIdx = cursor.getColumnIndex("date");
 
             do {
-                String message = cursor.getString(messagePos);
-                String address = cursor.getString(addressPos);
-                long dateTime = cursor.getLong(datePos);
-                Date date = new Date(dateTime);
+                String body = cursor.getString(bodyIdx);
+                String address = cursor.getString(addressIdx);
+                long dateLong = cursor.getLong(dateIdx);
+                Date date = new Date(dateLong);
 
                 SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
                 String formattedDate = dateFormat.format(date);
 
-                Toast.makeText(this, "From: " + address + "\nMessage: " + message + "\nDate: " + formattedDate, Toast.LENGTH_SHORT).show();
-                test.setText("Message: " + message + "\nFrom: " + address + "\nDate: " + formattedDate);
+                messages.add(new Message(body, address, formattedDate));
             } while (cursor.moveToNext());
+
             cursor.close();
         } else {
-            test.setText("No messages found.");
+            Toast.makeText(this, "No messages found", Toast.LENGTH_SHORT).show();
         }
+
+        adapter.setMessages(messages);
     }
 }
